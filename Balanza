@@ -1,0 +1,108 @@
+#include <HX711.h>
+#include <LiquidCrystal.h>
+
+// Definición de pines
+#define BUTTON_CALIBRATION_PIN 2
+#define BUTTON_TARE_PIN 3
+
+// Inicialización del HX711
+HX711 balanza;
+
+// Inicialización del LCD
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+// Peso de calibración conocido (en gramos)
+float peso_calibracion = 500.0;
+
+void setup() {
+  // Configuración de los pines de los botones como entrada
+  pinMode(BUTTON_CALIBRATION_PIN, INPUT);
+  pinMode(BUTTON_TARE_PIN, INPUT);
+
+  // Inicialización del LCD
+  lcd.begin(16, 2);
+
+  // Inicialización de la balanza
+  balanza.begin(A1, A0);
+}
+
+void loop() {
+  // Comprobar si el botón de calibración se ha presionado
+  if (digitalRead(BUTTON_CALIBRATION_PIN) == HIGH) {
+    calibration();
+  }
+
+  // Comprobar si el botón de tara se ha presionado
+  if (digitalRead(BUTTON_TARE_PIN) == HIGH) {
+    tare();
+  }
+
+  // Aquí puedes añadir la lógica principal del programa, como la lectura del peso y su visualización en el LCD
+  float peso = balanza.get_units(10);
+  lcd.setCursor(0, 0);
+  lcd.print("Peso: ");
+  lcd.print(peso);
+  lcd.print(" g");
+  delay(500);
+}
+
+void calibration() {
+  boolean conf = true;
+  long adc_lecture;
+
+  // Restar el peso de la base de la balanza
+  lcd.setCursor(0, 0);
+  lcd.print("Calibrando base");
+  lcd.setCursor(4, 1);
+  lcd.print("Balanza");
+  delay(3000);
+  balanza.read();
+  balanza.set_scale(); // La escala por defecto es 1
+  balanza.tare(20); // El peso actual es considerado cero.
+  lcd.clear();
+
+  // Iniciando calibración
+  while (conf == true) {
+    lcd.setCursor(1, 0);
+    lcd.print("Peso referencial:");
+    lcd.setCursor(1, 1);
+    lcd.print(peso_calibracion);
+    lcd.print(" g        ");
+    delay(3000);
+    lcd.clear();
+    lcd.setCursor(1, 0);
+    lcd.print("Ponga el Peso");
+    lcd.setCursor(1, 1);
+    lcd.print("Referencial");
+    delay(3000);
+
+    // Leer el valor del ADC y calcular la escala
+    adc_lecture = balanza.read_average(20);
+    balanza.set_scale(adc_lecture / peso_calibracion);
+    conf = false;
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Calibracion");
+    lcd.setCursor(1, 1);
+    lcd.print("completa");
+    delay(2000);
+    lcd.clear();
+  }
+}
+
+void tare() {
+  lcd.setCursor(0, 0);
+  lcd.print("Realizando");
+  lcd.setCursor(1, 1);
+  lcd.print("tara");
+  delay(2000);
+
+  balanza.tare();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Tara completada");
+  delay(2000);
+  lcd.clear();
+}
